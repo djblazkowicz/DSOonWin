@@ -1,4 +1,4 @@
-/**
+/*
 * This file is part of DSO.
 * 
 * Copyright 2016 Technical University of Munich and Intel.
@@ -22,12 +22,12 @@
 */
 
 
-
 #include <thread>
 #include <locale.h>
 #include <signal.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <iostream>
 #ifndef _DSO_ON_WIN
 #include <unistd.h>
 #endif
@@ -52,6 +52,24 @@
 #include "IOWrapper/Pangolin/PangolinDSOViewer.h"
 #include "IOWrapper/OutputWrapper/SampleOutputWrapper.h"
 #include "win/usleep.h"
+
+
+#include <opencv2/core.hpp>
+#include <opencv2/videoio.hpp>
+#include <opencv2/highgui.hpp>
+#include <opencv2/imgproc/imgproc.hpp>
+
+
+//SHARED MEM STUFF
+
+#include <boost/interprocess/managed_shared_memory.hpp>
+#include <iostream>
+#include <cstdlib> //std::system
+#include <sstream>
+#include <string.h>
+
+using namespace boost::interprocess;
+//SHARED MEM STUFF END
 
 
 std::string vignette = "";
@@ -159,7 +177,6 @@ void parseArgument(char* arg)
 	int option;
 	float foption;
 	char buf[1000];
-
 
     if(1==sscanf(arg,"sampleoutput=%d",&option))
     {
@@ -351,13 +368,43 @@ void parseArgument(char* arg)
 		return;
 	}
 
+
 	printf("could not parse argument \"%s\"!!!!\n", arg);
+}
+
+
+
+FullSystem* fullSystem = 0;
+Undistort* undistorter = 0;
+int frameID = 0;
+
+//this is for live use with usb camera
+cv::Mat cv_frame;
+
+void drawCamFrame(cv::VideoCapture cap) {
+
+	cap >> cv_frame;
+	// check if we succeeded
+	if (cv_frame.empty()) {
+		std::cerr << "ERROR! blank frame grabbed\n";
+		return;
+	}
+	cv::cvtColor(cv_frame, cv_frame, CV_BGR2GRAY);
+	cv::imshow("cam", cv_frame);
+	int k = cv::waitKey(1);
 }
 
 
 
 int main( int argc, char** argv )
 {
+	//set up camera
+	cv::VideoCapture cap(0);
+	cap.set(cv::CAP_PROP_FRAME_WIDTH, 640);
+	cap.set(cv::CAP_PROP_FRAME_HEIGHT, 480);
+	cap.set(cv::CAP_PROP_FPS, 60);
+	cap.set(cv::CAP_PROP_FOURCC, cv::VideoWriter::fourcc('M', 'J', 'P', 'G'));
+
 	//setlocale(LC_ALL, "");
 	for(int i=1; i<argc;i++)
 		parseArgument(argv[i]);
@@ -455,8 +502,72 @@ int main( int argc, char** argv )
         gettimeofday(&tv_start, NULL);
         clock_t started = clock();
         double sInitializerOffset=0;
+		/////////////break shit
+		/*
+		while (true)
+		{
+			if (!fullSystem->initialized)	// if not initialized: reset start time.
+			{
+				gettimeofday(&tv_start, NULL);
+				started = clock();
+				sInitializerOffset = 0;
+			}
+
+			//int i = idsToPlay[ii];
 
 
+
+			cap >> cv_frame;
+			// check if we succeeded
+			if (cv_frame.empty()) {
+				std::cerr << "ERROR! blank frame grabbed\n";
+				return;
+			}
+			cv::cvtColor(cv_frame, cv_frame, CV_BGR2GRAY);
+			cv::imshow("cam", cv_frame);
+
+			MinimalImageB minImg((int)cv_frame.cols, (int)cv_frame.rows, (unsigned char*)cv_frame.data);
+			ImageAndExposure* undistImg = undistorter->undistort<unsigned char>(&minImg, 1, 0, 1.0f);
+			undistImg->timestamp = 0; // relay the timestamp to dso
+			fullSystem->addActiveFrame(undistImg, frameID);
+			frameID++;
+
+			if (fullSystem->initFailed || setting_fullResetRequested)
+			{
+				if (setting_fullResetRequested)
+				{
+					printf("RESETTING!\n");
+
+					std::vector<IOWrap::Output3DWrapper*> wraps = fullSystem->outputWrapper;
+					delete fullSystem;
+
+					for (IOWrap::Output3DWrapper* ow : wraps) ow->reset();
+
+					fullSystem = new FullSystem();
+					fullSystem->setGammaFunction(reader->getPhotometricGamma());
+					fullSystem->linearizeOperation = (playbackSpeed == 0);
+
+
+					fullSystem->outputWrapper = wraps;
+
+					setting_fullResetRequested = false;
+				}
+			}
+
+			if (fullSystem->isLost)
+			{
+				printf("LOST!!\n");
+				break;
+			}
+
+			delete undistImg;
+
+			int k = cv::waitKey(1);
+
+		}
+		*/
+
+		
         for(int ii=0;ii<(int)idsToPlay.size(); ii++)
         {
             if(!fullSystem->initialized)	// if not initialized: reset start time.
@@ -493,9 +604,8 @@ int main( int argc, char** argv )
             }
 
 
-
             if(!skipFrame) fullSystem->addActiveFrame(img, i);
-
+			drawCamFrame(cap);
 
 
 
@@ -530,6 +640,7 @@ int main( int argc, char** argv )
             }
 
         }
+		
         fullSystem->blockUntilMappingIsFinished();
         clock_t ended = clock();
         struct timeval tv_end;

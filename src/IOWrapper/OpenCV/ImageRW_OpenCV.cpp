@@ -24,7 +24,10 @@
 
 
 #include "IOWrapper/ImageRW.h"
-#include <opencv2/highgui/highgui.hpp>
+#include <opencv2/core.hpp>
+#include <opencv2/videoio.hpp>
+#include <opencv2/highgui.hpp>
+#include <opencv2/imgproc/imgproc.hpp>
 
 
 namespace dso
@@ -32,6 +35,26 @@ namespace dso
 
 namespace IOWrap
 {
+
+MinimalImageB* captureImageBW_8U(cv::VideoCapture cap)
+{
+	cv::Mat m;
+	cap.read(m);
+	if (m.empty()) {
+		printf("ERROR! blank frame grabbed\n");
+		return 0;
+	}
+	cv::cvtColor(m, m, CV_BGR2GRAY);
+	if (m.type() != CV_8U)
+	{
+		printf("cv::cvtcolor issue, m.type is incorrect \n");
+		return 0;
+	}
+	MinimalImageB* img = new MinimalImageB(m.cols, m.rows);
+	memcpy(img->data, m.data, m.rows*m.cols);
+	return img;
+}
+
 MinimalImageB* readImageBW_8U(std::string filename)
 {
 	cv::Mat m = cv::imread(filename, CV_LOAD_IMAGE_GRAYSCALE);

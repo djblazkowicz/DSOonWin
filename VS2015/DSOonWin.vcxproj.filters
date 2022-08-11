@@ -165,6 +165,9 @@
     <ClInclude Include="..\src\win\usleep.h">
       <Filter>Header Files\Win</Filter>
     </ClInclude>
+    <ClInclude Include="..\src\util\SharedMemory.h">
+      <Filter>Header Files\Util</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\src\FullSystem\CoarseInitializer.cpp">
@@ -235,6 +238,9 @@
     </ClCompile>
     <ClCompile Include="..\src\IOWrapper\OpenCV\ImageRW_OpenCV.cpp">
       <Filter>Source Files\IOWrapper\OpenCV</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\util\SharedMemory.cpp">
+      <Filter>Source Files\Util</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

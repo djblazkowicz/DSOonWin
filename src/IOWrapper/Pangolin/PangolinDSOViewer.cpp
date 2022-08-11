@@ -28,22 +28,101 @@
 
 #include "util/settings.h"
 #include "util/globalCalib.h"
+#include "util/SharedMemory.h"
 #include "FullSystem/HessianBlocks.h"
 #include "FullSystem/FullSystem.h"
 #include "FullSystem/ImmaturePoint.h"
+#include <string.h>  
+#include <iostream> 
+#include <sstream> 
+
+
+
+//SHARED MEM STUFF
+
+#include <boost/interprocess/managed_shared_memory.hpp>
+#include <iostream>
+#include <cstdlib> //std::system
+#include <sstream>
+#include <string.h>
+
+using namespace boost::interprocess;
+
+
+
+
 
 namespace dso
 {
 namespace IOWrap
 {
 
-
+using namespace boost::interprocess;
 
 PangolinDSOViewer::PangolinDSOViewer(int w, int h, bool startRunThread)
 {
+
 	this->w = w;
 	this->h = h;
 	running=true;
+	//shared mem bs start
+	managed_shared_memory segment(create_only, "CameraPoseData", 65536);
+	managed_shared_memory::size_type free_memory_before = segment.get_free_memory();
+	this->shptr = segment.allocate(1024);
+	managed_shared_memory::size_type free_memory_after = segment.get_free_memory();
+
+	memset(this->buffer, '\0', sizeof(this->buffer));
+	memset(this->opt, '\0', sizeof(this->opt));
+
+	struct shm_remove
+	{
+		shm_remove() { shared_memory_object::remove("CameraPoseData"); }
+		~shm_remove() { shared_memory_object::remove("CameraPoseData"); }
+	} remover;
+
+
+
+	std::cout << "Free Memeory Before : " << free_memory_before << std::endl;
+	std::cout << "Free Memeory After  : " << free_memory_after << std::endl;
+	std::cout << "Free Memeory Diff.  : " << free_memory_before - free_memory_after << std::endl;
+	managed_shared_memory::handle_t handle = segment.get_handle_from_address(shptr);
+	std::cout << "Shared Memory handle : " << handle << std::endl;
+	//shared mem bs end
+
+	//EMBEDDED PYTHON
+	_putenv_s("PYTHONPATH", "D:/CODE/PYTHONPATH/");
+	Py_Initialize();
+
+	module = PyImport_ImportModule("foobar");
+	if (module == nullptr)
+	{
+		std::cout << "Failed to import module.";
+		//return 1;
+	}
+
+	dict = PyModule_GetDict(module);
+	if (dict == nullptr)
+	{
+		std::cout << "Failed to get module dict.";
+		//return 1;
+	}
+	Py_DECREF(module);
+
+	python_class = PyDict_GetItemString(dict, "foobar");
+	if (python_class == nullptr)
+	{
+		std::cout << "Failed to get class.";
+		//return 1;
+	}
+	Py_DECREF(dict);
+
+	sample_object = PyObject_CallObject(python_class, nullptr);
+	if (sample_object == nullptr)
+	{
+		std::cout << "Failed to instantiate object.";
+		//return 1;
+	}
+	Py_DECREF(python_class);
 
 
 	{
@@ -65,7 +144,6 @@ PangolinDSOViewer::PangolinDSOViewer(int w, int h, bool startRunThread)
 
 	needReset = false;
 
-
     if(startRunThread)
         runThread = boost::thread(&PangolinDSOViewer::run, this);
 
@@ -79,8 +157,25 @@ PangolinDSOViewer::~PangolinDSOViewer()
 }
 
 
+void PangolinDSOViewer::writeToSharedMemory(std::string data)
+{
+	memset(this->opt, '\0', sizeof(this->opt));
+	//std::cin.getline(opt, sizeof(opt));
+	memset(this->buffer, '\0', sizeof(this->buffer));
+
+	int i;
+	for (i = 0; i < data.length(); i++)
+	{
+		this->buffer[i] = data[i];
+	}
+
+	memset(this->shptr, '\0', 1024);
+	memcpy((char*)this->shptr, this->buffer, strlen(this->buffer));
+}
+
 void PangolinDSOViewer::run()
 {
+
 	printf("START PANGOLIN!\n");
 
 	pangolin::CreateWindowAndBind("Main",2*w,2*h);
@@ -486,9 +581,35 @@ void PangolinDSOViewer::publishKeyframes(
 void PangolinDSOViewer::publishCamPose(FrameShell* frame,
 		CalibHessian* HCalib)
 {
+	printf("OUT: Current Frame %d (time %f, internal ID %d). CameraToWorld:\n",
+		frame->incoming_id,
+		frame->timestamp,
+		frame->id);
+	std::cout << frame->camToWorld.matrix3x4() << "\n";
+	printf("CAMERA POSITION INFO:\n");
+
+	//std::string stringToServer;
+	std::stringstream stringBuffer;
+
+	//stringToServer = frame->camToWorld.translation().transpose() + " " + frame->camToWorld.so3().unit_quaternion().x() + " " + frame->camToWorld.so3().unit_quaternion().y() + " " + frame->camToWorld.so3().unit_quaternion().z() + " " + frame->camToWorld.so3().unit_quaternion().w() + "\n";
+
+	//stringToServer = std::to_string(frame->camToWorld.translation().transpose());
+
+	std::cout << frame->camToWorld.translation().transpose() << " " << frame->camToWorld.so3().unit_quaternion().x() << " " << frame->camToWorld.so3().unit_quaternion().y() <<	" " << frame->camToWorld.so3().unit_quaternion().z() <<	" " << frame->camToWorld.so3().unit_quaternion().w() << "\n";
+	stringBuffer << frame->camToWorld.translation().transpose() << " " << frame->camToWorld.so3().unit_quaternion().x() << " " << frame->camToWorld.so3().unit_quaternion().y() <<	" " << frame->camToWorld.so3().unit_quaternion().z() <<	" " << frame->camToWorld.so3().unit_quaternion().w() << std::endl;
+	
+	const const std::string tmp = stringBuffer.str();
+	const char* msg = tmp.c_str();
+	
+	std::cout << "FOR UDP PACKET: " << msg << "\n";
+
+	PyObject* output_list = PyObject_CallMethod(sample_object, "get_list",
+		"is", 0, msg);
+
+
     if(!setting_render_display3D) return;
     if(disableAllDisplay) return;
-
+	
 	boost::unique_lock<boost::mutex> lk(model3DMutex);
 	struct timeval time_now;
 	gettimeofday(&time_now, NULL);

@@ -105,11 +105,14 @@ public:
 
         virtual void publishCamPose(FrameShell* frame, CalibHessian* HCalib)
         {
+			/*
             printf("OUT: Current Frame %d (time %f, internal ID %d). CameraToWorld:\n",
                    frame->incoming_id,
                    frame->timestamp,
                    frame->id);
             std::cout << frame->camToWorld.matrix3x4() << "\n";
+			*/
+			std::cout << frame->camToWorld.translation().transpose() << " " << frame->camToWorld.so3().unit_quaternion().x() << " " << frame->camToWorld.so3().unit_quaternion().y() << " " << frame->camToWorld.so3().unit_quaternion().z() << " " << frame->camToWorld.so3().unit_quaternion().w() << "\n";
         }
 
 

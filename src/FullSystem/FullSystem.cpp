@@ -54,6 +54,17 @@
 
 #include "util/ImageAndExposure.h"
 
+//SHARED MEM STUFF
+
+#include <boost/interprocess/managed_shared_memory.hpp>
+#include <iostream>
+#include <cstdlib> //std::system
+#include <sstream>
+#include <string.h>
+
+using namespace boost::interprocess;
+//SHARED MEM STUFF END
+
 #ifdef _DSO_ON_WIN
 #define _USE_MATH_DEFINES
 #endif
@@ -210,6 +221,8 @@ FullSystem::~FullSystem()
 	delete pixelSelector;
 	delete ef;
 }
+
+
 
 void FullSystem::setOriginalCalib(const VecXf &originalCalib, int originalW, int originalH)
 {
@@ -830,6 +843,8 @@ void FullSystem::addActiveFrame( ImageAndExposure* image, int id )
 
 	if(!initialized)
 	{
+
+
 		// use initializer!
 		if(coarseInitializer->frameID<0)	// first frame set. fh is kept by coarseInitializer.
 		{
@@ -890,11 +905,11 @@ void FullSystem::addActiveFrame( ImageAndExposure* image, int id )
 
 		}
 
-
-
-
-        for(IOWrap::Output3DWrapper* ow : outputWrapper)
-            ow->publishCamPose(fh->shell, &Hcalib);
+		for (IOWrap::Output3DWrapper* ow : outputWrapper)
+		{
+			ow->publishCamPose(fh->shell, &Hcalib);
+		}
+            
 
 
 

@@ -96,7 +96,7 @@
     <IncludePath>$(IncludePath)</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <IncludePath>$(IncludePath)</IncludePath>
+    <IncludePath>C:\Program Files\Python310\libs;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
@@ -168,6 +168,7 @@
     <ClInclude Include="..\src\Util\nanoflann.h" />
     <ClInclude Include="..\src\Util\NumType.h" />
     <ClInclude Include="..\src\Util\settings.h" />
+    <ClInclude Include="..\src\util\SharedMemory.h" />
     <ClInclude Include="..\src\Util\Undistort.h" />
     <ClInclude Include="..\src\win\swap.h" />
     <ClInclude Include="..\src\win\timeval.h" />
@@ -196,6 +197,7 @@
     <ClCompile Include="..\src\OptimizationBackend\EnergyFunctionalStructs.cpp" />
     <ClCompile Include="..\src\Util\globalCalib.cpp" />
     <ClCompile Include="..\src\Util\settings.cpp" />
+    <ClCompile Include="..\src\util\SharedMemory.cpp" />
     <ClCompile Include="..\src\Util\Undistort.cpp" />
   </ItemGroup>
   <ItemGroup>

@@ -26,11 +26,15 @@
 #include <pangolin/pangolin.h>
 #include "boost/thread.hpp"
 #include "util/MinimalImage.h"
+#include "util/SharedMemory.h"
 #include "IOWrapper/Output3DWrapper.h"
 #include <map>
 #include <deque>
 
 #include "win/timeval.h"
+
+#include <C:\Program Files\Python310\include\Python.h>
+
 
 namespace dso
 {
@@ -85,8 +89,22 @@ public:
 	virtual void join();
 
 	virtual void reset();
-private:
 
+	//shared mem bs
+	char buffer[1024];
+	char opt[10];
+	void* shptr;
+
+	void writeToSharedMemory(std::string data);
+	//shared mem bs END
+
+
+
+
+private:
+	//sockets embedded python
+	PyObject* module, *dict, *python_class, *sample_object;
+	//SharedMemory *sharedMem;
 	bool needReset;
 	void reset_internal();
 	void drawConstraints();
