@@ -1,0 +1,1 @@
+D:\CODE\DSOonWin\VS2015\x64\Release\DSOonWin.exe files=D:\CODE\DSOonWin\dso_dataset\sequence_01\images.zip calib=D:\CODE\DSOonWin\dso_dataset\sequence_01\camera.txt gamma=D:\CODE\DSOonWin\dso_dataset\sequence_01\pcalib.txt vignette=D:\CODE\DSOonWin\dso_dataset\sequence_01\vignette.png preset=0 mode=1
