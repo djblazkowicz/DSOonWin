@@ -1,3 +1,14 @@
+# DSOonWin with embedded python UDP Client.
+
+this is my personal fork of DSOonWin created for my honours project. it contains an embedded python udp client that is used to send pose data to my SteamVR driver.
+
+create a c:\EMBEDDED_PYTHONPATH folder
+
+and place the EMBEDDED_UDPCLIENT.py into it
+
+download a dataset from https://vision.in.tum.de/data/datasets/mono-dataset and place it into the dso_dataset folder, and adjust the parameters in launch bat accordingly
+
+to build the project, follow the rest of the original instructions below.
 
 # Windows Compilation
 
